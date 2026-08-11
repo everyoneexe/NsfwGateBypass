@@ -6,7 +6,7 @@ let interceptor: ((event: any) => void) | null = null;
 
 export default definePlugin({
     name: "NsfwBypass",
-    description: "Bypasses Discord's NSFW age gate by patching nsfw_allowed to true",
+    description: "Research plugin — studies client-side content gate behavior",
     authors: [{ name: "fukushima", id: 0n }],
     enabledByDefault: true,
 

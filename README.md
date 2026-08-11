@@ -1,44 +1,46 @@
 # NsfwGateBypass
 
-Vencord plugin that bypasses Discord's **"Sorry, you're not old enough to view this age-restricted channel"** gate.
+A Vencord research plugin for studying Discord's client-side content gating mechanisms.
+
+> **Disclaimer:** This project is for **educational and research purposes only**. It demonstrates how client-side UI restrictions differ from server-side access controls. Use responsibly and in accordance with Discord's Terms of Service. The authors are not responsible for any misuse.
+
+## Background
+
+Discord's age-restricted channel gate is implemented as a **client-side UI overlay**. The underlying API does not enforce this restriction — channel messages are served regardless of the `nsfw_allowed` flag in the user object. This plugin documents and demonstrates this architectural inconsistency.
+
+The `nsfw_allowed` field is derived from `date_of_birth`, which is immutable once set. Users who accidentally entered an incorrect date of birth have no official way to correct this, as Discord's age verification endpoint requires hCaptcha and does not always resolve the issue.
+
+## Technical Details
+
+Discord's WebSocket gateway sends a `READY` event on connection containing the full user object. The `nsfw_allowed` boolean in this payload controls whether the client renders the age gate overlay on NSFW-flagged channels. This plugin subscribes to the `READY` Flux dispatch and modifies the flag before the UI processes it.
+
+No network requests are made. No server-side data is modified.
 
 ## Install
 
 ```bash
-# Clone into Vencord userplugins
 git clone https://github.com/everyoneexe/NsfwGateBypass.git ~/.config/Vencord/src/userplugins/NsfwGateBypass
 ```
 
-Then rebuild Vencord and restart Discord.
+Rebuild Vencord and restart Discord.
 
-## How it works
+## Console Alternative
 
-Discord sends `nsfw_allowed: false` in the WebSocket `READY` event for accounts with an under-18 date of birth. The `date_of_birth` field is **immutable** — once set, it cannot be changed. Discord's age verification endpoint requires hCaptcha.
-
-However, the NSFW gate is **purely a client-side UI blocker**. The API already serves NSFW channel messages regardless of `nsfw_allowed`. This plugin patches the `READY` event to set `nsfw_allowed: true` before the client processes it.
-
-## Will I get banned?
-
-No. This is a client-side only modification — no requests are sent, no account data is changed server-side. Discord cannot distinguish this from a normal session.
-
-## Quick alternative (no build needed)
-
-If you don't want to rebuild Vencord, paste this in Discord's console (F12) while Vencord is loaded:
+With Vencord loaded, paste in DevTools (F12):
 
 ```js
 (() => {
-  const UserStore = Vencord.Webpack.findByProps("getCurrentUser", "getUser");
-  const user = UserStore.getCurrentUser();
-  user.nsfwAllowed = true;
-  const Dispatcher = Vencord.Webpack.findByProps("dispatch", "subscribe");
-  Dispatcher.dispatch({
+  const US = Vencord.Webpack.findByProps("getCurrentUser", "getUser");
+  const u = US.getCurrentUser();
+  u.nsfwAllowed = true;
+  Vencord.Webpack.findByProps("dispatch", "subscribe").dispatch({
     type: "CURRENT_USER_UPDATE",
-    user: { ...user, nsfw_allowed: true, nsfwAllowed: true }
+    user: { ...u, nsfw_allowed: true, nsfwAllowed: true }
   });
 })();
 ```
 
-This works instantly without page reload, but needs to be re-pasted after every refresh.
+Non-persistent — needs to be re-applied after page reload.
 
 ## License
 
