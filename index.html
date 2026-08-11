@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Discord NSFW Gate Bypass</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #0a0a0f;
+    color: #e0e0e0;
+    min-height: 100vh;
+  }
+
+  .app {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    height: 100vh;
+  }
+
+  /* === SIDEBAR === */
+  .sidebar {
+    background: #111118;
+    border-right: 1px solid #1e1e2a;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .sidebar-header {
+    padding: 16px;
+    border-bottom: 1px solid #1e1e2a;
+  }
+
+  .sidebar-header h2 {
+    font-size: 0.85rem;
+    color: #5865f2;
+    font-weight: 700;
+    margin-bottom: 12px;
+  }
+
+  .sidebar-header input {
+    width: 100%;
+    padding: 8px 10px;
+    background: #08080d;
+    border: 1px solid #222233;
+    border-radius: 6px;
+    color: #e0e0e0;
+    font-size: 0.8rem;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    outline: none;
+  }
+
+  .sidebar-header input:focus { border-color: #5865f2; }
+  .sidebar-header input::placeholder { color: #333; }
+
+  .sidebar-header label {
+    display: block;
+    font-size: 0.7rem;
+    color: #555;
+    margin-bottom: 4px;
+    margin-top: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .connect-btn {
+    width: 100%;
+    padding: 8px;
+    background: #5865f2;
+    border: none;
+    border-radius: 6px;
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 12px;
+  }
+  .connect-btn:hover { background: #4752c4; }
+  .connect-btn:disabled { background: #333; color: #666; cursor: not-allowed; }
+
+  .guild-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+  }
+
+  .guild-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-bottom: 2px;
+    font-size: 0.82rem;
+    color: #888;
+    transition: all 0.15s;
+  }
+  .guild-item:hover { background: #1a1a25; color: #ccc; }
+  .guild-item.active { background: #5865f222; color: #5865f2; }
+
+  .guild-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #222;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #666;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+  .guild-icon img { width: 100%; height: 100%; object-fit: cover; }
+
+  .channel-list {
+    padding: 4px 8px;
+  }
+
+  .channel-category {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #444;
+    padding: 12px 8px 4px;
+    font-weight: 700;
+  }
+
+  .channel-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.82rem;
+    color: #666;
+    transition: all 0.15s;
+  }
+  .channel-item:hover { background: #1a1a25; color: #ccc; }
+  .channel-item.active { background: #5865f222; color: #5865f2; }
+  .channel-item.nsfw { color: #ed4245; }
+  .channel-item.nsfw::before { content: "18+"; font-size: 0.55rem; background: #ed424533; color: #ed4245; padding: 1px 4px; border-radius: 3px; font-weight: 700; }
+
+  /* === MAIN CHAT === */
+  .main {
+    display: flex;
+    flex-direction: column;
+    background: #0a0a0f;
+  }
+
+  .chat-header {
+    padding: 12px 20px;
+    border-bottom: 1px solid #1e1e2a;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 48px;
+  }
+
+  .chat-header-hash { color: #444; font-size: 1.2rem; }
+  .chat-header-name { font-weight: 600; font-size: 0.95rem; }
+  .chat-header-badge {
+    font-size: 0.6rem;
+    background: #57f28733;
+    color: #57f287;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 600;
+  }
+
+  .chat-header-info {
+    margin-left: auto;
+    font-size: 0.75rem;
+    color: #555;
+  }
+
+  .messages-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 20px;
+  }
+
+  .messages-area::-webkit-scrollbar { width: 6px; }
+  .messages-area::-webkit-scrollbar-track { background: transparent; }
+  .messages-area::-webkit-scrollbar-thumb { background: #222; border-radius: 3px; }
+
+  .message {
+    display: flex;
+    gap: 14px;
+    padding: 6px 0;
+    margin-bottom: 4px;
+  }
+  .message:hover { background: #ffffff04; border-radius: 4px; }
+
+  .msg-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #222;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+  .msg-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+  .msg-body { flex: 1; min-width: 0; }
+
+  .msg-header {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 3px;
+  }
+
+  .msg-author {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #fff;
+  }
+  .msg-author.bot { color: #5865f2; }
+  .msg-bot-tag {
+    font-size: 0.55rem;
+    background: #5865f2;
+    color: #fff;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-weight: 700;
+    vertical-align: middle;
+  }
+  .msg-time {
+    font-size: 0.7rem;
+    color: #444;
+  }
+
+  .msg-content {
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: #ddd;
+    word-wrap: break-word;
+  }
+
+  .msg-content a {
+    color: #00aff4;
+    text-decoration: none;
+  }
+  .msg-content a:hover { text-decoration: underline; }
+
+  .msg-embed {
+    margin-top: 8px;
+    max-width: 520px;
+  }
+
+  .msg-embed img, .msg-embed video {
+    max-width: 100%;
+    max-height: 350px;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+
+  .msg-attachment {
+    margin-top: 8px;
+  }
+  .msg-attachment img, .msg-attachment video {
+    max-width: 100%;
+    max-height: 350px;
+    border-radius: 8px;
+  }
+
+  .msg-reply {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    color: #555;
+    margin-bottom: 4px;
+    padding-left: 0;
+  }
+  .msg-reply::before {
+    content: "";
+    display: inline-block;
+    width: 28px;
+    height: 12px;
+    border-left: 2px solid #444;
+    border-top: 2px solid #444;
+    border-radius: 6px 0 0 0;
+    margin-right: 4px;
+  }
+  .msg-reply-author { color: #888; font-weight: 600; }
+  .msg-reply-content { color: #555; }
+
+  /* Chat input */
+  .chat-input-area {
+    padding: 12px 20px;
+    border-top: 1px solid #1e1e2a;
+  }
+
+  .chat-input-wrapper {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .chat-input {
+    flex: 1;
+    padding: 10px 14px;
+    background: #111118;
+    border: 1px solid #222233;
+    border-radius: 8px;
+    color: #e0e0e0;
+    font-size: 0.9rem;
+    outline: none;
+  }
+  .chat-input:focus { border-color: #5865f2; }
+  .chat-input::placeholder { color: #333; }
+
+  .send-btn {
+    padding: 10px 16px;
+    background: #5865f2;
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.85rem;
+  }
+  .send-btn:hover { background: #4752c4; }
+
+  /* Loading & empty states */
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #333;
+    font-size: 0.9rem;
+    gap: 8px;
+  }
+  .empty-state .big { font-size: 2rem; }
+
+  .loading-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 2px solid #333;
+    border-top: 2px solid #5865f2;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Status bar */
+  .status-bar {
+    padding: 6px 16px;
+    background: #57f28711;
+    border-bottom: 1px solid #57f28733;
+    font-size: 0.72rem;
+    color: #57f287;
+    display: none;
+  }
+  .status-bar.error { background: #ed424511; border-color: #ed424533; color: #ed4245; }
+  .status-bar.warning { background: #fee75c11; border-color: #fee75c33; color: #fee75c; }
+
+  /* Lightbox */
+  .lightbox {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.9);
+    z-index: 1000;
+    cursor: zoom-out;
+    align-items: center;
+    justify-content: center;
+  }
+  .lightbox.active { display: flex; }
+  .lightbox img, .lightbox video {
+    max-width: 95vw;
+    max-height: 95vh;
+    border-radius: 4px;
+  }
+
+  /* Scrollbar */
+  .sidebar::-webkit-scrollbar, .guild-list::-webkit-scrollbar, .channel-list::-webkit-scrollbar { width: 4px; }
+  .sidebar::-webkit-scrollbar-track, .guild-list::-webkit-scrollbar-track { background: transparent; }
+  .sidebar::-webkit-scrollbar-thumb { background: #222; border-radius: 4px; }
+
+  .bypass-badge {
+    font-size: 0.55rem;
+    background: #ed424533;
+    color: #ed4245;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-weight: 700;
+    margin-left: 6px;
+  }
+
+  .load-more-btn {
+    display: block;
+    margin: 12px auto;
+    padding: 8px 24px;
+    background: #1a1a25;
+    border: 1px solid #222233;
+    border-radius: 6px;
+    color: #888;
+    font-size: 0.8rem;
+    cursor: pointer;
+  }
+  .load-more-btn:hover { background: #222233; color: #ccc; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h2>NSFW Gate Bypass</h2>
+
+      <label>Token</label>
+      <input type="password" id="token" placeholder="MTM3NDEx..." autocomplete="off">
+
+      <label>Channel ID</label>
+      <input type="text" id="channelId" placeholder="1536460184199626824">
+
+      <button class="connect-btn" id="connectBtn" onclick="connect()">Baglan</button>
+    </div>
+
+    <div id="channelInfo" class="channel-list" style="display:none;"></div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+    <div id="statusBar" class="status-bar"></div>
+
+    <div class="chat-header" id="chatHeader">
+      <span class="chat-header-hash">#</span>
+      <span class="chat-header-name" id="channelName">Kanal sec</span>
+    </div>
+
+    <div class="messages-area" id="messagesArea">
+      <div class="empty-state">
+        <div class="big">Bypass Viewer</div>
+        <div>Token ve Channel ID girip "Baglan" tusuna bas.</div>
+        <div style="color:#555; font-size:0.75rem; margin-top:8px;">
+          Discord age gate'i sadece web arayuzunde.<br>
+          API uzerinden mesajlar okunabilir — bu arac onu yapiyor.
+        </div>
+      </div>
+    </div>
+
+    <div class="chat-input-area">
+      <div class="chat-input-wrapper">
+        <input class="chat-input" id="chatInput" placeholder="Mesaj yaz..." onkeydown="if(event.key==='Enter')sendMessage()">
+        <button class="send-btn" onclick="sendMessage()">Gonder</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <img id="lightboxImg" src="">
+</div>
+
+<script>
+const API = 'http://localhost:8009/api/v9';
+let currentChannel = null;
+let allMessages = [];
+let oldestMsgId = null;
+let pollingTimer = null;
+let newestMsgId = null;
+
+function getHeaders() {
+  return {
+    'Authorization': document.getElementById('token').value.trim(),
+    'Content-Type': 'application/json',
+  };
+}
+
+function showStatus(msg, type = '') {
+  const bar = document.getElementById('statusBar');
+  bar.textContent = msg;
+  bar.className = 'status-bar ' + type;
+  bar.style.display = 'block';
+  if (type !== 'error') {
+    setTimeout(() => { bar.style.display = 'none'; }, 4000);
+  }
+}
+
+// === CONNECT ===
+async function connect() {
+  const token = document.getElementById('token').value.trim();
+  const channelId = document.getElementById('channelId').value.trim();
+
+  if (!token || !channelId) {
+    showStatus('Token ve Channel ID gerekli!', 'error');
+    return;
+  }
+
+  // Save
+  localStorage.setItem('dc_token', token);
+  localStorage.setItem('dc_channel', channelId);
+
+  currentChannel = channelId;
+  document.getElementById('connectBtn').disabled = true;
+  document.getElementById('connectBtn').textContent = 'Baglaniyor...';
+
+  try {
+    // Kanal bilgisini cek
+    const channelInfo = await apiFetch(`/channels/${channelId}`);
+    const channelName = channelInfo.name || channelId;
+    const isNsfw = channelInfo.nsfw || false;
+
+    document.getElementById('channelName').textContent = channelName;
+
+    // Guild bilgisi
+    if (channelInfo.guild_id) {
+      try {
+        const guild = await apiFetch(`/guilds/${channelInfo.guild_id}?with_counts=true`);
+        const infoDiv = document.getElementById('channelInfo');
+        infoDiv.style.display = 'block';
+        infoDiv.innerHTML = `
+          <div class="channel-category">${guild.name || 'Sunucu'}</div>
+          <div class="channel-item active ${isNsfw ? 'nsfw' : ''}">
+            # ${channelName}
+            ${isNsfw ? '<span class="bypass-badge">NSFW BYPASS</span>' : ''}
+          </div>
+        `;
+      } catch(e) {}
+    }
+
+    const headerEl = document.getElementById('chatHeader');
+    headerEl.innerHTML = `
+      <span class="chat-header-hash">#</span>
+      <span class="chat-header-name">${channelName}</span>
+      ${isNsfw ? '<span class="bypass-badge">NSFW BYPASSED</span>' : ''}
+      <span class="chat-header-badge">API Direct</span>
+      <span class="chat-header-info" id="msgCount">0 mesaj</span>
+    `;
+
+    // Mesajlari yukle
+    await loadMessages(channelId);
+
+    showStatus(`Baglandi: #${channelName} ${isNsfw ? '(NSFW Bypass Aktif)' : ''}`);
+
+    // Realtime polling baslat
+    startPolling();
+
+  } catch (e) {
+    showStatus(`Hata: ${e.message}`, 'error');
+  }
+
+  document.getElementById('connectBtn').disabled = false;
+  document.getElementById('connectBtn').textContent = 'Baglan';
+}
+
+// === API FETCH ===
+async function apiFetch(path, opts = {}) {
+  const resp = await fetch(`${API}${path}`, {
+    headers: getHeaders(),
+    ...opts,
+  });
+
+  if (resp.status === 429) {
+    const data = await resp.json();
+    const wait = (data.retry_after || 5) * 1000;
+    showStatus(`Rate limited! ${data.retry_after}s bekleniyor...`, 'warning');
+    await new Promise(r => setTimeout(r, wait));
+    return apiFetch(path, opts);
+  }
+
+  if (!resp.ok) {
+    const err = await resp.text();
+    throw new Error(`${resp.status}: ${err}`);
+  }
+
+  if (resp.status === 204) return null;
+  return resp.json();
+}
+
+// === LOAD MESSAGES ===
+async function loadMessages(channelId, before = null) {
+  let url = `/channels/${channelId}/messages?limit=50`;
+  if (before) url += `&before=${before}`;
+
+  const messages = await apiFetch(url);
+  if (!messages || messages.length === 0) return;
+
+  if (before) {
+    allMessages = [...allMessages, ...messages];
+  } else {
+    allMessages = messages;
+  }
+
+  oldestMsgId = allMessages[allMessages.length - 1].id;
+  newestMsgId = allMessages[0].id;
+
+  renderMessages();
+
+  // Bypass explicit media
+  const embedMsgIds = messages
+    .filter(m => (m.embeds && m.embeds.length > 0) || (m.attachments && m.attachments.length > 0))
+    .map(m => m.id);
+
+  if (embedMsgIds.length > 0) {
+    try {
+      await apiFetch(`/channels/${channelId}/explicit-media`, {
+        method: 'PATCH',
+        body: JSON.stringify({ message_ids: embedMsgIds }),
+      });
+    } catch(e) { /* silent */ }
+  }
+}
+
+// === RENDER MESSAGES ===
+function renderMessages() {
+  const area = document.getElementById('messagesArea');
+  const wasAtBottom = area.scrollTop + area.clientHeight >= area.scrollHeight - 50;
+
+  // Kronolojik sira (eski -> yeni)
+  const sorted = [...allMessages].reverse();
+
+  let html = `<button class="load-more-btn" onclick="loadMore()">Daha eski mesajlari yukle</button>`;
+
+  for (const msg of sorted) {
+    html += renderMessage(msg);
+  }
+
+  area.innerHTML = html;
+
+  if (wasAtBottom || !oldestMsgId) {
+    area.scrollTop = area.scrollHeight;
+  }
+
+  const countEl = document.getElementById('msgCount');
+  if (countEl) countEl.textContent = `${allMessages.length} mesaj`;
+}
+
+function renderMessage(msg) {
+  const author = msg.author;
+  const isBot = author.bot || false;
+  const avatarUrl = author.avatar
+    ? `https://cdn.discordapp.com/avatars/${author.id}/${author.avatar}.webp?size=64`
+    : `https://cdn.discordapp.com/embed/avatars/${(BigInt(author.id) >> 22n) % 6n}.png`;
+
+  const time = new Date(msg.timestamp).toLocaleString('tr-TR', {
+    hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit'
+  });
+
+  // Content - linkleri clickable yap
+  let content = escapeHtml(msg.content || '');
+  content = content.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank">$1</a>');
+
+  // Reply
+  let replyHtml = '';
+  if (msg.referenced_message) {
+    const ref = msg.referenced_message;
+    const refContent = (ref.content || '').substring(0, 80);
+    replyHtml = `
+      <div class="msg-reply">
+        <span class="msg-reply-author">${escapeHtml(ref.author?.username || '?')}</span>
+        <span class="msg-reply-content">${escapeHtml(refContent)}</span>
+      </div>
+    `;
+  }
+
+  // Embeds
+  let embedsHtml = '';
+  if (msg.embeds) {
+    for (const embed of msg.embeds) {
+      const thumbUrl = embed.thumbnail?.proxy_url || embed.thumbnail?.url;
+      const embedUrl = embed.url;
+      if (thumbUrl) {
+        if (thumbUrl.endsWith('.gif') || embedUrl?.endsWith('.gif')) {
+          embedsHtml += `<div class="msg-embed"><img src="${thumbUrl}" onclick="openLightbox('${thumbUrl}')" loading="lazy"></div>`;
+        } else {
+          embedsHtml += `<div class="msg-embed"><img src="${thumbUrl}" onclick="openLightbox('${thumbUrl}')" loading="lazy"></div>`;
+        }
+      }
+    }
+  }
+
+  // Attachments
+  let attachHtml = '';
+  if (msg.attachments) {
+    for (const att of msg.attachments) {
+      const url = att.proxy_url || att.url;
+      const ct = att.content_type || '';
+      if (ct.startsWith('image/')) {
+        attachHtml += `<div class="msg-attachment"><img src="${url}" onclick="openLightbox('${url}')" loading="lazy"></div>`;
+      } else if (ct.startsWith('video/')) {
+        attachHtml += `<div class="msg-attachment"><video src="${url}" controls></video></div>`;
+      } else {
+        attachHtml += `<div class="msg-attachment"><a href="${url}" target="_blank">${escapeHtml(att.filename || 'dosya')}</a></div>`;
+      }
+    }
+  }
+
+  return `
+    <div class="message">
+      <div class="msg-avatar"><img src="${avatarUrl}" onerror="this.style.display='none'"></div>
+      <div class="msg-body">
+        ${replyHtml}
+        <div class="msg-header">
+          <span class="msg-author ${isBot ? 'bot' : ''}">${escapeHtml(author.global_name || author.username)}</span>
+          ${isBot ? '<span class="msg-bot-tag">BOT</span>' : ''}
+          <span class="msg-time">${time}</span>
+        </div>
+        <div class="msg-content">${content}</div>
+        ${embedsHtml}
+        ${attachHtml}
+      </div>
+    </div>
+  `;
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// === LOAD MORE ===
+async function loadMore() {
+  if (!currentChannel || !oldestMsgId) return;
+  showStatus('Daha eski mesajlar yukleniyor...');
+  await loadMessages(currentChannel, oldestMsgId);
+}
+
+// === POLLING (realtime) ===
+function startPolling() {
+  if (pollingTimer) clearInterval(pollingTimer);
+
+  pollingTimer = setInterval(async () => {
+    if (!currentChannel) return;
+
+    try {
+      let url = `/channels/${currentChannel}/messages?limit=10`;
+      if (newestMsgId) url += `&after=${newestMsgId}`;
+
+      const messages = await apiFetch(url);
+      if (messages && messages.length > 0) {
+        // Yeni mesajlari ekle
+        const newMsgs = messages.filter(m => !allMessages.find(am => am.id === m.id));
+        if (newMsgs.length > 0) {
+          allMessages = [...newMsgs, ...allMessages];
+          newestMsgId = allMessages[0].id;
+          renderMessages();
+
+          // Auto bypass
+          const embedIds = newMsgs
+            .filter(m => (m.embeds?.length > 0) || (m.attachments?.length > 0))
+            .map(m => m.id);
+
+          if (embedIds.length > 0) {
+            try {
+              await apiFetch(`/channels/${currentChannel}/explicit-media`, {
+                method: 'PATCH',
+                body: JSON.stringify({ message_ids: embedIds }),
+              });
+            } catch(e) {}
+          }
+        }
+      }
+    } catch(e) { /* silent polling errors */ }
+  }, 3000);
+}
+
+// === SEND MESSAGE ===
+async function sendMessage() {
+  const input = document.getElementById('chatInput');
+  const content = input.value.trim();
+  if (!content || !currentChannel) return;
+
+  input.value = '';
+
+  try {
+    await apiFetch(`/channels/${currentChannel}/messages`, {
+      method: 'POST',
+      body: JSON.stringify({ content }),
+    });
+  } catch(e) {
+    showStatus(`Gonderilemedi: ${e.message}`, 'error');
+    input.value = content;
+  }
+}
+
+// === LIGHTBOX ===
+function openLightbox(url) {
+  const lb = document.getElementById('lightbox');
+  const img = document.getElementById('lightboxImg');
+  img.src = url;
+  lb.classList.add('active');
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('active');
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+
+// === INIT ===
+window.addEventListener('load', () => {
+  const saved = localStorage.getItem('dc_token');
+  if (saved) document.getElementById('token').value = saved;
+  const savedCh = localStorage.getItem('dc_channel');
+  if (savedCh) document.getElementById('channelId').value = savedCh;
+});
+</script>
+</body>
+</html>
